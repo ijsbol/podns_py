@@ -47,7 +47,7 @@ __all__: tuple[str, ...] = (
 )
 
 
-ILLEGAL_PRONOUN_CHARACTERS: Final[Literal[r'";/!#']] = r'";/!#'
+ILLEGAL_PRONOUN_CHARACTERS: Final[Literal[r'*;/!#']] = r'*;/!#'
 PARSER_CONVERSIONS: Final[dict[str, str]] = {
     "it/its": "it/it/its/its/itself",
 }
