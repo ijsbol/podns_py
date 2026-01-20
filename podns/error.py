@@ -25,7 +25,7 @@ SOFTWARE.
 __all__: tuple[str, ...] = (
     "PODNSError",
     "PODNSParserError",
-    "PODNSParserSetsAfterNone",
+    "PODNSParserRecordsAfterNone",
     "PODNSParserInvalidTag",
     "PODNSParserEmptySegmentInPronounSet",
     "PODNSParserTagWithoutPronounSet",
@@ -44,7 +44,7 @@ class PODNSParserError(PODNSError):
     pass
 
 
-class PODNSParserSetsAfterNone(PODNSParserError):
+class PODNSParserRecordsAfterNone(PODNSParserError):
     pass
 
 
@@ -73,4 +73,8 @@ class PODNSParserIllegalCharacterInPronouns(PODNSParserError):
 
 
 class PODNSParserTooManyPronounSetValues(PODNSParserError):
+    pass
+
+
+class PODNSParserContentAfterMagicDeclaration(PODNSParserError):
     pass

@@ -22,14 +22,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from typing import Final, Literal
+from typing import (
+    Final,
+    Iterable,
+    Literal,
+)
 
 from podns.error import (
+    PODNSParserContentAfterMagicDeclaration,
     PODNSParserEmptySegmentInPronounSet,
     PODNSParserIllegalCharacterInPronouns,
     PODNSParserInsufficientPronounSetValues,
     PODNSParserInvalidTag,
-    PODNSParserSetsAfterNone,
+    PODNSParserRecordsAfterNone,
     PODNSParserTagWithoutPronounSet,
     PODNSParserTooManyPronounSetValues,
     PODNSParserTrailingSlash,
@@ -42,12 +47,10 @@ from podns.pronouns import (
 )
 
 
-__all__: tuple[str, ...] = (
-    "parse_pronoun_records",
-)
+__all__: tuple[str, ...] = ("parse_pronoun_records",)
 
 
-ILLEGAL_PRONOUN_CHARACTERS: Final[Literal[r'*;/!#']] = r'*;/!#'
+ILLEGAL_PRONOUN_CHARACTERS: Final[Literal[r"*;/!#"]] = r"*;/!#"
 PARSER_CONVERSIONS: Final[dict[str, str]] = {
     "it/its": "it/it/its/its/itself",
 }
@@ -60,20 +63,14 @@ def _normalise_record(record: str) -> str:
     # remove spaces around /'s
     pronoun_segment: str = record.split(";")[0]
     pronoun_segments: list[str] = pronoun_segment.split("/")
-    pronoun_segment: str = '/'.join(seg.strip() for seg in pronoun_segments)
-
-    # ensure that there are no illegal characters present
-    illegal_characters_set: set[str] = set(ILLEGAL_PRONOUN_CHARACTERS)
-    for seg in pronoun_segments:
-        if illegal_characters_set.difference(seg) != illegal_characters_set:
-            raise PODNSParserIllegalCharacterInPronouns(f"{seg=} contains an illegal character defined by: {ILLEGAL_PRONOUN_CHARACTERS=}")
+    pronoun_segment: str = "/".join(seg.strip() for seg in pronoun_segments)
 
     # add tag part back to record
     tag_segment_parts: list[str] = record.split(";")
     if len(tag_segment_parts) == 1:
         full_record = pronoun_segment
     else:
-        tag_segment: str = ';'.join(tag_segment_parts[1:])
+        tag_segment: str = ";".join(tag_segment_parts[1:])
         full_record: str = pronoun_segment + ";" + tag_segment
 
     # normalise repeating ;
@@ -101,7 +98,9 @@ def _parse_pronouns(record, *, pedantic: bool) -> Pronouns:
 
     # check for trailing slash
     if pronoun_part.endswith("/") and pedantic:
-        raise PODNSParserTrailingSlash(f"Trailing slash in pronouns with {pedantic=} - {record=}")
+        raise PODNSParserTrailingSlash(
+            f"Trailing slash in pronouns with {pedantic=} - {record=}"
+        )
 
     # check for empty segment
     pronouns_set = pronoun_part.split("/")
@@ -110,10 +109,22 @@ def _parse_pronouns(record, *, pedantic: bool) -> Pronouns:
 
     # ensure at least subject/object are present
     if len(pronouns_set) < 2:
-        raise PODNSParserInsufficientPronounSetValues(f"There must be at least subject and object pronouns: {record=}")
+        raise PODNSParserInsufficientPronounSetValues(
+            f"There must be at least subject and object pronouns: {record=}"
+        )
 
     if len(pronouns_set) > 5 and pedantic:
-        raise PODNSParserTooManyPronounSetValues(f"There are too many provided pronoun values: {record=}")
+        raise PODNSParserTooManyPronounSetValues(
+            f"There are too many provided pronoun values: {record=}"
+        )
+
+    # ensure that there are no illegal characters present
+    for pronoun in pronouns_set:
+        illegal_characters_set: set[str] = set(ILLEGAL_PRONOUN_CHARACTERS)
+        if illegal_characters_set.difference(pronoun) != illegal_characters_set:
+            raise PODNSParserIllegalCharacterInPronouns(
+                f"{pronoun=} contains an illegal character defined by: {ILLEGAL_PRONOUN_CHARACTERS=}"
+            )
 
     # appropriately parse into a `Pronouns` object
     possessive_determiner = None
@@ -141,7 +152,9 @@ def _parse_tags(record, *, pedantic: bool) -> set[PronounTag]:
     parts = record.rsplit(";")
     if len(parts) == 1 and ";" in record:
         if pedantic:
-            raise PODNSParserTagWithoutPronounSet(f"A tag was defined without a preceding pronoun set declaration: {record=}")
+            raise PODNSParserTagWithoutPronounSet(
+                f"A tag was defined without a preceding pronoun set declaration: {record=}"
+            )
         else:
             return set()
 
@@ -169,33 +182,90 @@ def _parse_record(record: str, *, pedantic: bool) -> PronounRecord:
     ):
         tags.add(PronounTag.PLURAL)
 
-    return PronounRecord(pronouns=pronouns, tags=tags)
+    return PronounRecord(pronouns=pronouns, tags=frozenset(tags))
 
 
-def parse_pronoun_records(pronoun_records: list[str], *, pedantic: bool = False) -> PronounsResponse:
+def _deduplicate_records(records: set[PronounRecord]) -> set[PronounRecord]:
+    bubbled_super_set_records: set[PronounRecord] = set()
+    for assumed_superset_record in records:
+        record_tags: set[PronounTag] = set(assumed_superset_record.tags)
+        superset_is_actually_subset = False
+        for assumed_strict_subset_record in records:
+            if assumed_strict_subset_record.pronouns.is_strict_subset_of(
+                assumed_superset_record.pronouns
+            ):
+                record_tags.update(assumed_strict_subset_record.tags)
+            elif assumed_superset_record.pronouns.is_strict_subset_of(
+                assumed_strict_subset_record.pronouns
+            ):
+                superset_is_actually_subset = True
+            elif (
+                assumed_superset_record.pronouns
+                == assumed_strict_subset_record.pronouns
+            ):
+                record_tags.update(assumed_strict_subset_record.tags)
+        if not superset_is_actually_subset:
+            bubbled_super_set_records.add(
+                PronounRecord(
+                    pronouns=assumed_superset_record.pronouns,
+                    tags=frozenset(record_tags),
+                )
+            )
+
+    return bubbled_super_set_records
+
+
+def parse_pronoun_records(
+    pronoun_records: Iterable[str],
+    *,
+    pedantic: bool = False,
+) -> PronounsResponse:
     uses_any_pronouns: bool = False
     uses_name_only: bool = False
-    records: list[PronounRecord] = []
+    records: set[PronounRecord] = set()
 
     for record in pronoun_records:
         normalised_record: str = _normalise_record(record)
-        if len(normalised_record) == 0:          # empty record
+        if len(normalised_record) == 0:  # empty record (maybe a fully comment record)
             continue
         elif normalised_record.startswith("!"):  # none; use name only declarator
+            if pedantic and len(normalised_record) != 1:
+                raise PODNSParserContentAfterMagicDeclaration(
+                    f"Characters declared after normalised ! record: {normalised_record=} ({record=})"
+                )
             uses_name_only = True
             continue
         elif normalised_record.startswith("*"):  # wildcard; any pronoun is declarator
+            if pedantic and len(normalised_record) != 1:
+                raise PODNSParserContentAfterMagicDeclaration(
+                    f"Characters declared after normalised * record: {normalised_record=} ({record=})"
+                )
             uses_any_pronouns = True
             continue
-        else:                                    # pronoun set
-            parsed_record: PronounRecord = _parse_record(normalised_record, pedantic=pedantic)
-            records.append(parsed_record)
+        else:  # pronoun set
+            parsed_record: PronounRecord = _parse_record(
+                normalised_record, pedantic=pedantic
+            )
+            records.add(parsed_record)
 
-    if pedantic and uses_name_only and len(records) > 0:
-        raise PODNSParserSetsAfterNone(f"{uses_name_only=} and {len(records) > 0=}.")
+    records = _deduplicate_records(records)
+
+    if uses_name_only:
+        if pedantic and uses_any_pronouns:
+            raise PODNSParserRecordsAfterNone(
+                f"Records are defined after setting no pronouns: (any pronouns set)"
+            )
+        elif uses_any_pronouns:
+            uses_any_pronouns = False
+        elif pedantic and len(records) != 0:
+            raise PODNSParserRecordsAfterNone(
+                f"Records are defined after setting no pronouns: {records=}"
+            )
+        elif len(records) != 0:
+            records = set()
 
     return PronounsResponse(
         uses_any_pronouns=uses_any_pronouns,
         uses_name_only=uses_name_only,
-        records=[] if uses_name_only else records,
+        records=frozenset() if uses_name_only else frozenset(records),
     )

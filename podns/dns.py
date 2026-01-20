@@ -35,7 +35,9 @@ __all__: tuple[str, ...] = (
 )
 
 
-def fetch_pronouns_from_domain_sync(domain: str, *, pedantic: bool = False) -> PronounsResponse | None:
+def fetch_pronouns_from_domain_sync(
+    domain: str, *, pedantic: bool = False
+) -> PronounsResponse | None:
     try:
         dns_answers = dns.resolver.resolve(f"pronouns.{domain}", "TXT")
     except dns.resolver.NXDOMAIN:
@@ -43,7 +45,9 @@ def fetch_pronouns_from_domain_sync(domain: str, *, pedantic: bool = False) -> P
     return parse_pronoun_records(list(dns_answers), pedantic=pedantic)
 
 
-async def fetch_pronouns_from_domain_async(domain: str, *, pedantic: bool = False) -> PronounsResponse | None:
+async def fetch_pronouns_from_domain_async(
+    domain: str, *, pedantic: bool = False
+) -> PronounsResponse | None:
     try:
         dns_answers = await dns.asyncresolver.resolve(f"pronouns.{domain}", "TXT")
     except dns.resolver.NXDOMAIN:
