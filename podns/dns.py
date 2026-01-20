@@ -42,7 +42,7 @@ def fetch_pronouns_from_domain_sync(
         dns_answers = dns.resolver.resolve(f"pronouns.{domain}", "TXT")
     except dns.resolver.NXDOMAIN:
         return None
-    return parse_pronoun_records(list(dns_answers), pedantic=pedantic)
+    return parse_pronoun_records([str(ans)[1:-1] for ans in dns_answers], pedantic=pedantic)
 
 
 async def fetch_pronouns_from_domain_async(
@@ -52,4 +52,4 @@ async def fetch_pronouns_from_domain_async(
         dns_answers = await dns.asyncresolver.resolve(f"pronouns.{domain}", "TXT")
     except dns.resolver.NXDOMAIN:
         return None
-    return parse_pronoun_records(list(dns_answers), pedantic=pedantic)
+    return parse_pronoun_records([str(ans)[1:-1] for ans in dns_answers], pedantic=pedantic)
