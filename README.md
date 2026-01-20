@@ -1,5 +1,13 @@
 # podns_py
 
+![enbyware](https://pride-badges.pony.workers.dev/static/v1?label=enbyware&labelColor=%23555&stripeWidth=8&stripeColors=FCF434%2CFFFFFF%2C9C59D1%2C2C2C2C)
+![license](https://img.shields.io/github/license/ijsbol/podns_py)
+![pypi-version](https://img.shields.io/pypi/v/podns)
+![python-version](https://img.shields.io/pypi/pyversions/podns)
+![github-issues](https://img.shields.io/github/issues/ijsbol/podns_py)
+![github-issues](https://img.shields.io/github/issues/ijsbol/podns_py)
+
+
 A [Pronouns over DNS](https://github.com/CutieZone/pronouns-over-dns/) specification compliant Python API.
 
 
@@ -47,3 +55,7 @@ For all user-level APIs (that is, `podns.dns.fetch_pronouns_from_domain_*` and `
 
 - Setting this to `True` will raise errors on all specification-violating parse errors from the provided records.
 - Setting this to `False` will only raise errors on egregious specification violations that make parsing impossible. When set to `False`, podns will do its' best to infer intent when met with trivial violations, it will however never return a `podns.pronouns.PronounsResponse` that violates the specification.
+
+
+> [!NOTE]
+> there was exactly zero usage of generative ai involved during the development of this package, including autocomplete.
