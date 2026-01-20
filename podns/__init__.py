@@ -22,7 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from .dns import fetch_pronouns_from_domain_sync, fetch_pronouns_from_domain_async
+from .dns import (
+    fetch_pronouns_from_domain_async,
+    fetch_pronouns_from_domain_sync,
+)
 from .error import PODNSError
 from .parser import parse_pronoun_records
 from .pronouns import PronounsResponse
